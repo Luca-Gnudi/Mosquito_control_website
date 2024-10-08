@@ -16,8 +16,18 @@
     <!-- Navigation Bar -->
     <div class="navbar">
         <a href="#"><img src="/android-chrome-512x512.png" alt="Logo" class="navbar-logo"></a>
-        <a href="index.html" class="active">Home</a>
+        <!-- <a href="index.html" class="active">Home</a> -->
+    <div class="dropdown">
+        <button class="dropbtn">Home &#9660 </button>
+        <div class="dropdown-content">
+            <a href="#conditions">Current Conditions</a>
+            <a href="#controlParametersSection">Control Parameter Settings</a> 
+            <a href="#parameters">Set Parameters</a>
+            <a href="#data">Data Plot</a>
+        </div>
+    </div>
         <a href="/networks.html">Available Networks</a>
+        <button id="mosquitoModeBtn">Mosquito Mode</button>
     </div>
 
     <!-- Main Content -->
@@ -30,37 +40,62 @@
             <p id="status">Error fetching conditions.</p> <!-- For showing success or error messages  -->
         </section>
 
+        <!-- Section for displaying control parameters -->
+        <section id="controlParametersSection">
+            <h2>Control Parameter Settings</h2>
+            <p><strong>Temperature (°C):</strong> <span id="controlTemperature">Loading...</span></p>
+            <p><strong>Humidity (%):</strong> <span id="controlHumidity">Loading...</span></p>
+            <p><strong>Max Lighting (lux):</strong> <span id="controlMaxLighting">Loading...</span></p>
+            <p><strong>Day Length (min):</strong> <span id="controlDayLength">Loading...</span></p>
+            <p><strong>Sampling Duration (min):</strong> <span id="controlSamplingDuration">Loading...</span></p>
+            <p><strong>Lighting Mode:</strong> <span id="controlLightingMode">Loading...</span></p>
+            <p><strong>Minute Count (min):</strong> <span id="controlMinuteCount">Loading...</span></p>
+            <p><strong>Time On:</strong> <span id="controlTimeOn">Loading...</span></p>
+            <p><strong>Time Off:</strong> <span id="controlTimeOff">Loading...</span></p>
+        </section>
+
+
         <section id="parameters">
             <h1>Set Parameters</h1>
-            <label for="setTemperature">Set Temperature (°C): </label>
+            <label for="setTemperature">Set Temperature (°C): (Current Setting: <span id="currentTemperature">Loading...</span>)</label>
             <input type="number" id="setTemperature" placeholder="Temperature in °C">
             <!-- <span>�C</span> -->
             <br><br>
-            <label for="setHumidity">Set Humidity (%): </label>
+            <label for="setHumidity">Set Humidity (%): (Current Setting: <span id="currentHumidity">Loading...</span>)</label>
             <input type="number" id="setHumidity" placeholder="Humidity in %" min="0" max="100">
             <!-- <span>%</span> -->
             <br><br>
-            <label for="setMaxLighting">Set Maximum Lighting (lux): </label>
+            <label for="setMaxLighting">Set Maximum Lighting (lux): (Current Setting: <span id="currentMaxLighting">Loading...</span>)</label>
             <input type="number" id="setMaxLighting" placeholder="Max Lighting in lux">
             <!-- <span>lux</span> -->
             <br><br>
-            <label for="setDayLength">Set Length of Daylight (hours and minutes): </label>
+            <label for="setDayLength">Set Length of Daylight (hours and minutes): (Current Setting: <span id="currentDayLength">Loading...</span>)</label>
             <input type="number" id="setDayLengthHours" placeholder="Hours" min="0" max="24">
             <input type="number" id="setDayLengthMinutes" placeholder="Minutes" min="0" max="59">
             <!-- <span>hours and minutes</span> -->
             <br><br>
-            <label for="lightingMode">Set Lighting Mode</label>
+            <label for="lightingMode">Set Lighting Mode: (Current Mode: <span id="currentLightingMode">Loading...</span>) </label>
             <select id="lightingMode">
                 <option value="" disable selected>Lighting Mode</option>
                 <option value="Constant">Constant</option>
-                <option value="Defualt">Default</option>
+                <option value="Default">Default</option>
                 <option value="Custom">Custom</option>
             </select>
             <br><br>
-            <label for="setSamplingDuration">Set Sampling Period (hours and minutes): </label>
+            <label for="setSamplingDuration">Set Sampling Period (hours and minutes): (Current Setting: <span id="currentSamplingDuration">Loading...</span>)</label>
             <input type="number" id="setSamplingDurationHours" placeholder="Hours" min="0">
             <input type="number" id="setSamplingDurationMinutes" placeholder="Minutes" min="0" max="59">
             <br><br>
+            <label for="minuteCount">Set Time in Cycle (Current Setting: <span id="currentMinuteCount">Loading...</span>)</label>
+            <input type="number" id="setMinuteCountHours" placeholder="Hours" min="0" max="24">
+            <input type="number" id="setMinuteCountMinutes" placeholder="Minutes" min="0" max="59"> 
+            <br><br>
+            <label for="timeOn">Set Time On (Current Setting: <span id="currentTimeOn">Loading...</span>)</label>
+            <input type="time" id="timeOn" placeholder="hh:mm">
+            <br><br>
+            <label for="timeOff">Set Time Off (Current Setting: <span id="currentTimeOff">Loading...</span>)</label>
+            <input type="time" id="timeOff" placeholder="hh:mm">
+            <br><br>  
             <button onclick="setParameters()">Set Parameters</button>
            
         </section>
@@ -103,8 +138,7 @@
                 <button id="downloadLighting">Download Lighting Graph</button>
             </div>
             <br><br>
-            <button id="download-full-csv">Download Full Data as CSV</button> &nbsp; <button id="download-filtered-csv">Download Graph Data CSV</button>
-            <button id="downloadBtn">Download Combined Graph as Image</button> &nbsp; 
+            <button id="download-full-csv">Download Full Data as CSV</button> &nbsp; <button id="download-filtered-csv">Download Graph Data CSV</button> &nbsp; <button id="downloadBtn">Download Combined Graph as Image</button> 
         </section>
     </div>
 
@@ -164,6 +198,192 @@
         // Updaste the conditions every 5s
         setInterval(fetchConditions, 5000);
 
+         // Function to convert minutes into hours and minutes (e.g., "1 hour 30 minutes")
+        function convertMinutesToHoursAndMinutes(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            let result = '';
+
+            if (hours > 0) {
+                result += hours === 1 ? `${hours} hour` : `${hours} hours`;
+            }
+
+            if (remainingMinutes > 0) {
+                if (hours > 0) result += ' ';
+                result += remainingMinutes === 1 ? `${remainingMinutes} minute` : `${remainingMinutes} minutes`;
+            }
+
+            return result || '0 minutes'; // Fallback to "0 minutes" if the input is 0
+        }
+
+        let setControlParameters;
+
+        document.getElementById('mosquitoModeBtn').addEventListener('click', async function() {
+            // Show a confirmation popup when trying to enable mosquito mode
+            if (!setControlParameters) {
+                const confirmed = confirm("You are about to enter Mosquito Mode. This will immediately apply control parameters and allow setting new ones.");
+                
+                if (confirmed) {
+                    // If confirmed, enter mosquito mode and set control parameters
+                    setControlParameters = true;  // Enable control parameters
+
+                    try {
+                        // Send the updated mosquito mode to the backend
+                        const response = await fetch('/setMosquitoMode', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: new URLSearchParams({
+                                MosquitoMode: setControlParameters
+                            })
+                        });
+
+                        // Handle the backend response
+                        const result = await response.json();
+                        alert(`Mosquito mode set: ${result.message}`);
+                        document.body.classList.add('mosquito-mode');  // Add mosquito mode styling
+                        fetchCurrentParameters(); //update to show the control parameters
+                        console.log('mosquito mode:', setControlParameters);
+                       
+                    } catch (error) {
+                        alert(`Error setting Mosquito Mode: ${error.message}`);
+                        setControlParameters = false;
+                    }
+                    
+                } else {
+                    // If not confirmed, do nothing
+                    alert("Mosquito Mode was canceled.");
+                }
+            } else {
+                const confirmed = confirm("You are about to leave Mosquito Mode. This will immediately remove control parameters and set the last parameters.")
+
+                if(confirmed){
+
+                // Toggle mosquito mode off
+                setControlParameters = false;
+                try {
+                        // Send the updated mosquito mode to the backend
+                        const response = await fetch('/setMosquitoMode', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: new URLSearchParams({
+                                MosquitoMode: setControlParameters
+                            })
+                        });
+
+                        // Handle the backend response
+                        const result = await response.json();
+                        alert(`Mosquito mode set: ${result.message}`);
+                       
+                        document.body.classList.remove('mosquito-mode');
+                        console.log('mosquito mode:', setControlParameters);
+                        
+                    } catch (error) {
+                        alert(`Error setting Mosquito Mode: ${error.message}`);
+                        setControlParameters = true;
+                    }
+
+                }else{
+                    alert("Mosquito Mode deactivation was cancelled");
+                }
+            }
+
+
+
+
+        });
+
+        async function fetchControlParameters() {
+            try {
+                const response = await fetch('/getControlParameters');
+                const data = await response.json();
+
+                if(data.mosquitoMode === 'true'){
+                    setControlParameters = true;
+
+                    document.body.classList.add('mosquito-mode');
+                }else{
+                    setControlParameters = false; 
+                    document.body.classList.remove('mosquito-mode');
+                }
+
+                // try {
+                //         // Send the updated mosquito mode to the backend
+                //         const response = await fetch('/setMosquitoMode', {
+                //             method: 'POST',
+                //             headers: {
+                //                 'Content-Type': 'application/x-www-form-urlencoded',
+                //             },
+                //             body: new URLSearchParams({
+                //                 MosquitoMode: setControlParameters
+                //             })
+                //         });
+
+                //         // Handle the backend response
+                //         const result = await response.json();
+                //         //alert(`Mosquito mode set: ${result.message}`);
+                       
+                //         // document.body.classList.remove('mosquito-mode');
+                //         // console.log('mosquito mode:', setControlParameters);
+                        
+                //     } catch (error) {
+                //         alert(`Error setting Mosquito Mode: ${error.message}`);
+                //     }
+                
+                // Populate the "control Parameters" section with the control settings
+                document.getElementById('controlTemperature').textContent = data.temperature || 'Not Set';
+                document.getElementById('controlHumidity').textContent = data.humidity || 'Not Set';
+                document.getElementById('controlMaxLighting').textContent = data.maxLighting || 'Not Set';
+
+                // Convert dayLength and samplingDuration from minutes to hours and minutes format
+                document.getElementById('controlDayLength').textContent = convertMinutesToHoursAndMinutes(data.dayLength) || 'Not Set';
+                document.getElementById('controlSamplingDuration').textContent = convertMinutesToHoursAndMinutes(data.samplingDuration) || 'Not Set';
+
+                document.getElementById('controlLightingMode').textContent = data.lightingMode || 'Not Set';
+                document.getElementById('controlMinuteCount').textContent = data.minuteCount || 'Not Set';
+                document.getElementById('controlTimeOn').textContent = data.timeOn || 'Not Set';
+                document.getElementById('controlTimeOff').textContent = data.timeOff || 'Not Set';
+            } catch (err) {
+                console.error('Failed to fetch control settings:', err);
+            }
+        }
+
+
+        async function fetchCurrentParameters() {
+            try {
+
+                let response;
+                //show the relevant parameters
+                if (setControlParameters){
+                    response = await fetch('getControlParameters');
+                } else{
+                    response = await fetch('/getParameters');
+                }
+                
+                const data = await response.json();
+                
+                // Populate the "Current Parameters" section with the current settings
+                document.getElementById('currentTemperature').textContent = data.temperature || 'Not Set';
+                document.getElementById('currentHumidity').textContent = data.humidity || 'Not Set';
+                document.getElementById('currentMaxLighting').textContent = data.maxLighting || 'Not Set';
+
+                // Convert dayLength and samplingDuration from minutes to hours and minutes format
+                document.getElementById('currentDayLength').textContent = convertMinutesToHoursAndMinutes(data.dayLength) || 'Not Set';
+                document.getElementById('currentSamplingDuration').textContent = convertMinutesToHoursAndMinutes(data.samplingDuration) || 'Not Set';
+
+                document.getElementById('currentLightingMode').textContent = data.lightingMode || 'Not Set';
+                document.getElementById('currentMinuteCount').textContent = data.minuteCount || 'Not Set';
+                document.getElementById('currentTimeOn').textContent = data.timeOn || 'Not Set';
+                document.getElementById('currentTimeOff').textContent = data.timeOff || 'Not Set';
+            } catch (err) {
+                console.error('Failed to fetch current settings:', err);
+            }
+        }
+
+
         async function setParameters() {
             const temperature = document.getElementById('setTemperature').value;
             const humidity = document.getElementById('setHumidity').value;
@@ -174,7 +394,10 @@
             const samplingDurationHours = parseInt(document.getElementById('setSamplingDurationHours').value, 10);
             const samplingDurationMinutes = parseInt(document.getElementById('setSamplingDurationMinutes').value, 10);
             const lightingMode = document.getElementById('lightingMode').value; 
-
+            const minuteCountHours = parseInt(document.getElementById('setMinuteCountHours').value,10);
+            const minuteCountMinutes = parseInt(document.getElementById('setMinuteCountMinutes').value,10);
+            const timeOn = document.getElementById('timeOn').value;
+            const timeOff = document.getElementById('timeOff').value;
             //validate the input for humidity
             if(humidity < 0 || humidity > 100){
                 alert('Please enter valid humidity between 0% and 100%');
@@ -183,7 +406,7 @@
 
             // Validate the input for hours and minutes
             if (dayLengthHours < 0 || dayLengthHours > 24 || dayLengthMinutes < 0 || dayLengthMinutes > 59) {
-                alert('Please enter valid hours (0-24) and minutes (0-59).');
+                alert('Please enter valid hours (0-24) and minutes (0-59) for Day Length.');
                 return;
             }
 
@@ -221,6 +444,26 @@
                 totalSamplingDuration = (hours * 60) + minutes;
             }
 
+            // Validate the input for hours and minutes
+            if (minuteCountHours < 0 || minuteCountHours > 24 || minuteCountMinutes < 0 || minuteCountMinutes > 59) {
+                alert('Please enter valid hours (0-24) and minutes (0-59) for Time in Cycle');
+                return;
+            }
+
+            let totalMinuteCount=null;
+            if(!minuteCountHours && !minuteCountMinutes){
+                totalMinuteCount = "";
+            } else{
+                const hours = parseInt(minuteCountHours) || 0;
+                const minutes = parseInt(minuteCountMinutes) || 0;
+                totalMinuteCount = (hours*60) + minutes;
+            }
+
+            if(totalMinuteCount < 0 || totalMinuteCount > 1440){
+                alert('Please enter a time between 0 and 24 hours');
+                return;
+            }
+
             //const totalSamplingDuration = (samplingDurationHours * 60) + samplingDurationMinutes;
 
             try {
@@ -237,11 +480,17 @@
                         dayLength: totalDayLength,
                         samplingDuration: totalSamplingDuration,
                         lightingMode:lightingMode,
+                        minuteCount: totalMinuteCount,
+                        timeOn: timeOn,
+                        timeOff: timeOff,
+
                     }),
                 });
 
                 if (response.ok) {
                     alert('Parameters set successfully');
+                    fetchCurrentParameters();
+                    fetchControlParameters();
                 } else {
                     alert(`Failed to set parameters: ${await response.text()}`);
                 }
@@ -473,13 +722,13 @@
 
     let combinedChart = null;
     let plotBasedOnTimeRange = false;
-    let UpdateGraph = null;
+    let UpdateGraph = true;
 
     //set to false to plot without time range again.
-    async function plotGraphWithoutTimeRange() {
-        plotBasedOnTimeRange = false;
-        UpdateGraph = true;
-    }
+//     async function plotGraphWithoutTimeRange() {
+//         plotBasedOnTimeRange = false;
+//         UpdateGraph = true;
+//     }
 
     async function plotGraphBasedOnTimeRange() {
         const startDate = document.getElementById('startDate').value;
@@ -507,6 +756,7 @@
 
     async function plotGraphWithoutTimeRange() {
         plotBasedOnTimeRange = false;
+        UpdateGraph = true;
 
         // Reset to plot the entire dataset without filtering by date
         await plotCombinedData();
@@ -739,7 +989,7 @@
 
             // Check if the startDate and endDate elements exist
             if (!startDateElem) {
-                console.error('Start date input field not found');
+                alert('Start date input field not found');
                 return;
             }
             
@@ -896,7 +1146,7 @@
                     x:{
                         grid: {
                             color: isDarkMode() ? '#444' : '#666666' //Initial gridline colour
-                        },
+                        }, 
                         title: {
                             display: true,
                             text: 'Time',
@@ -1001,7 +1251,7 @@
 
         // Ensure startDate is provided
         if (!startDate) {
-            console.error('Start date is required.');
+            alert('Start date is required.');
             document.getElementById('status').textContent = 'Please provide a start date.';
             return;
         }
@@ -1023,10 +1273,14 @@
     });
 
 
+
     window.onload = async function() {
         fetchConditions();
+        fetchControlParameters();
+        fetchCurrentParameters();
         await plotCombinedData(); // Ensure combined data is plotted
         await plotSeparateData(); // Ensure separate data is plotted
+
 
         document.getElementById('plotbutton').addEventListener('click', plotGraphBasedOnTimeRange);
         document.getElementById('plotWithoutTimeRange').addEventListener('click', plotGraphWithoutTimeRange);

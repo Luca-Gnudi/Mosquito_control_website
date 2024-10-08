@@ -44,6 +44,28 @@ async function readCurrentSettings(filePath) {
     }
 }
 
+// Endpoint to fetch the current parameters
+app.get('/getParameters', async (req, res) => {
+    try {
+        const currentSettings = await readCurrentSettings('setting.txt');
+        res.json(currentSettings);
+    } catch (err) {
+        console.error('Failed to fetch settings:', err);
+        res.status(500).send('Failed to retrieve settings.');
+    }
+});
+
+app.get('/getControlParameters', async (req, res) => {
+    try {
+        const currentSettings = await readCurrentSettings('Control.txt');
+        setControlParameters = currentSettings.mosquitoMode;
+        res.json(currentSettings);
+    } catch (err) {
+        console.error('Failed to fetch control settings:', err);
+        res.status(500).send('Failed to retrieve control settings.');
+    }
+});
+
 // Function to write to file with exclusive access
 async function writeToFileExclusive(filePath, data) {
     let fileHandle;
@@ -64,60 +86,394 @@ async function writeToFileExclusive(filePath, data) {
     }
 }
 
+let setControlParameters;
 
-app.post('/setParameters', async (req, res) => {
-    const { temperature, humidity, maxLighting, dayLength, samplingDuration, lightingMode } = req.body;
-    let temp, humid, maxLight, dayLen, lightMod, sampDur;
-    
-    const currentSettings = await readCurrentSettings('setting.txt');
+// app.post('/setMosquitoMode', (req, res) => {
+//     const { MosquitoMode } = req.body;
 
-    // Validate and set each parameter
-    if (temperature) {
-        temp = temperature;
+//     // Set global variable based on mosquito mode value
+//     setControlParameters = MosquitoMode;
+
+//     let status = '';
+
+//     if(setControlParameters){
+//         status = 'activated';
+//     } else{
+//         status = 'deactivated'; 
+//     }
+
+//     console.log('Mosquito mode set to:', setControlParameters);
+
+//     // Optionally trigger the existing /setParameters endpoint if needed
+//     fetch('/setParameters').then(response => {
+//         return res.json({ success: true, message: `Mosquito Mode ${status} successfully!` });
+//     }).catch(err => {
+//         console.error('Error setting parameters:', err);
+//         return res.status(500).json({ error: `Failed to ${status} Mosquito Mode.` });
+//     });
+// });
+
+app.post('/setMosquitoMode', async (req, res) => {
+    const { MosquitoMode } = req.body;
+
+    // Set the global variable
+    setControlParameters = MosquitoMode;
+
+    let status;
+
+    if(setControlParameters === 'true'){
+        status = 'activated';
     } else{
-        temp = currentSettings.temperature;
+        status = 'deactivated'; 
     }
-
-    if (humidity && !isNaN(parseInt(humidity, 10))) {
-        humid = humidity;
-    } else{
-        humid = currentSettings.humidity;
-    }
-
-    if (maxLighting && !isNaN(parseFloat(maxLighting))) {
-        maxLight = maxLighting;
-    } else{
-        maxLight = currentSettings.maxLighting;
-    }
-
-    if (dayLength && !isNaN(parseInt(dayLength, 10))) {
-        dayLen = dayLength;
-    } else {
-        daylen = currentSettings.dayLength;
-    }
-
-    if(samplingDuration){
-        sampDur = samplingDuration;
-    } else{
-        sampDur = currentSettings.samplingDuration;
-    }
-
-    if(lightingMode){
-        lightMod = lightingMode;
-    } else {
-        lightMod = currentSettings.lightingMode;
-    }
-
-    const settings = `temperature=${temp}\nhumidity=${humid}\nmaxLighting=${maxLight}\ndayLength=${dayLen}\nsamplingDuration=${sampDur}\nligthingMode=${lightMod}`;;
 
     try {
-        await writeToFileExclusive('setting.txt', settings);
-        res.send('Parameters set successfully.');
-    } catch (err) {
-        console.error('Failed to write to setting.txt:', err);
-        res.status(500).send('Failed to set parameters.');
+        console.log('set mode hit:', setControlParameters); 
+        // // Construct the full URL for fetch
+        // const url = `${req.protocol}://${req.get('host')}/setParameters`;
+
+        // // Send the request to set parameters
+        // const response = await fetch(url, {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //     },
+        //     body: JSON.stringify({ mosquitoMode: setControlParameters }),
+        // });
+        const newSettings=''; 
+        const result = await setParametersInternal(newSettings);  // Use the shared internal function
+
+        if (result.success) {
+            return res.status(200).json({ message: `Mosquito Mode ${status} successfully!` }); // Send success message
+        } else {
+            throw new Error(`Failed to ${status} Mosquito Mode.`);  // Send error message
+        }
+
+        // if (!response.ok) {
+        //     throw new Error(`Failed to ${status} Mosquito Mode.`);
+        // }
+
+        // return res.status(200).json({ message: `Mosquito Mode ${status} successfully!` });
+    } catch (error) {
+        console.error(`Error setting parameters: ${error.message}`);
+        return res.status(500).json({ error: `Failed to ${status} Mosquito Mode.` });
     }
 });
+
+
+
+// Function to check if mosquito mode is activated and write control parameters to the settings.txt
+// async function isMosquitoModeActivated() {
+//     const controlSettings = await readCurrentSettings('Control.txt');
+//     if(controlSettings.mosquitoMode === 'true'){
+//         setControlParameters = true;
+//     }else{
+//         setControlParameters = false; 
+//     }
+// }
+
+// Function to set control parameters
+// async function setControlParameters(req) {
+//     const { temperature, humidity, maxLighting, dayLength, samplingDuration, lightingMode, minuteCount, timeOn, timeOff } = req.body;
+//     let controlParams = '';
+
+//     // Check if mosquito mode is activated
+//     if (await isMosquitoModeActivated()) {
+//         controlParams = `mosquitoMode=true\ncontrol_temperature=${temperature}\ncontrol_humidity=${humidity}\ncontrol_maxLighting=${maxLighting}\ncontrol_dayLength=${dayLength}\ncontrol_samplingDuration=${samplingDuration}\ncontrol_lightingMode=${lightingMode}\ncontrol_minuteCount=${minuteCount}\ncontrol_timeOn=${timeOn}\ncontrol_timeOff=${timeOff}`;
+//     }
+
+//     return controlParams;
+// }
+
+// app.post('/setParameters', async (req, res) => {
+//     const { temperature, humidity, maxLighting, dayLength, samplingDuration, lightingMode, minuteCount, timeOn, timeOff } = req.body;
+//     let temp, humid, maxLight, dayLen, lightMod, sampDur, minCont, t_on,t_off;
+    
+//     const currentSettings = await readCurrentSettings('setting.txt');
+
+//     // Validate and set each parameter
+//     if (temperature) {
+//         temp = temperature;
+//     } else{
+//         temp = currentSettings.temperature;
+//     }
+
+//     if (humidity && !isNaN(parseInt(humidity, 10))) {
+//         humid = humidity;
+//     } else{
+//         humid = currentSettings.humidity;
+//     }
+
+//     if (maxLighting && !isNaN(parseFloat(maxLighting))) {
+//         maxLight = maxLighting;
+//     } else{
+//         maxLight = currentSettings.maxLighting;
+//     }
+
+//     if (dayLength) {
+//         dayLen = dayLength;
+//     } else {
+//         dayLen = currentSettings.dayLength;
+//     }
+
+//     if(samplingDuration){
+//         sampDur = samplingDuration;
+//     } else{
+//         sampDur = currentSettings.samplingDuration;
+//     }
+
+//     if(lightingMode){
+//         lightMod = lightingMode;
+//     } else {
+//         lightMod = currentSettings.lightingMode;
+//     }
+
+//     if(minuteCount){
+//         minCont = minuteCount;
+//     } else {
+//         minCont = currentSettings.minuteCount;
+//     }
+
+//     if(timeOn){
+//         t_on = timeOn;
+//     } else {
+//         t_on = currentSettings.timeOn;
+//     }
+
+//     if(timeOn){
+//         t_off = timeOff;
+//     } else {
+//         t_off = currentSettings.timeOff;
+//     }
+
+
+//     const settings = `temperature=${temp}\nhumidity=${humid}\nmaxLighting=${maxLight}\ndayLength=${dayLen}\nsamplingDuration=${sampDur}\nlightingMode=${lightMod}\nminuteCount=${minCont}\ntimeOn=${t_on}\ntimeOff=${t_off}`;
+
+//     try {
+//         await writeToFileExclusive('setting.txt', settings);
+//         res.send('Parameters set successfully.');
+//     } catch (err) {
+//         console.error('Failed to write to setting.txt:', err);
+//         res.status(500).send('Failed to set parameters.');
+//     }
+
+    
+// });
+
+// Centralized function to update parameters
+function updateAllParameters(currentSettings, newSettings) {
+    
+    if (newSettings.temperature !== undefined && newSettings.temperature !== '') {
+      currentSettings.temperature = newSettings.temperature;
+    }
+  
+    if (newSettings.humidity !== undefined && newSettings.humidity !== '') {
+      currentSettings.humidity = newSettings.humidity;
+    }
+  
+    if (newSettings.maxLighting !== undefined && newSettings.maxLighting !== '') {
+      currentSettings.maxLighting = newSettings.maxLighting;
+    }
+  
+    if (newSettings.dayLength !== undefined && newSettings.dayLength !== '') {
+      currentSettings.dayLength = newSettings.dayLength;
+    }
+  
+    if (newSettings.control !== undefined && newSettings.control !== '') {
+      currentSettings.control = newSettings.control;
+    }
+
+    if (newSettings.minuteCount !== undefined && newSettings.minuteCount !== ''){
+        currentSettings.minuteCount = newSettings.minuteCount;
+    }
+
+    if(newSettings.timeOn !== undefined && newSettings.timeOn !== ''){
+        currentSettings.timeOn = newSettings.timeOn;
+    }
+
+    if(newSettings.timeOff !== undefined && newSettings.timeOff !== ''){
+        currentSettings.timeOff = newSettings.timeOff;
+    }
+  
+    return currentSettings;
+  }
+
+function formatSettingsString(settings) {
+    // This function converts the settings object into the desired string format for the file
+    return Object.entries(settings).map(([key, value]) => `${key}=${value}`).join('\n');
+}
+
+async function setParametersInternal(newSettings) {
+    let filePath;
+
+    try {
+        console.log('setinternal parameters control?', setControlParameters);
+        if(setControlParameters === 'true'){
+
+            filePath = 'Control.txt';
+            
+            let currentSettings = await readCurrentSettings(filePath);
+            console.log('newSettings for control',newSettings);
+            currentSettings = updateAllParameters(currentSettings, newSettings);
+            currentSettings.mosquitoMode = 'true';
+            
+            //console.log('current Control.txt settings should read true:', currentSettings);
+            const controlSettingsString = formatSettingsString(currentSettings);  // Format the control settings
+            await writeToFileExclusive(filePath, controlSettingsString);  
+
+            return { success: true, message: 'Parameters set successfully.' };
+
+        } else {
+            filePath = 'setting.txt';
+
+            let currentSettings = await readCurrentSettings(filePath); 
+            currentSettings = updateAllParameters(currentSettings, newSettings);
+            const settingsString = formatSettingsString(currentSettings);  // Format the settings as a string
+            await writeToFileExclusive(filePath, settingsString);  // Write the formatted string to the file
+
+            filePath = 'Control.txt';
+            //newSettings = ''; //ensure that the other settings are not changed
+            currentSettings = await readCurrentSettings(filePath);
+           // currentSettings = updateAllParameters(currentSettings, newSettings);
+            currentSettings.mosquitoMode = 'false';
+            //console.log('current setting.txt settings should read false: ', currentSettings);
+            const controlSettingsString = formatSettingsString(currentSettings);  // Format the control settings
+            await writeToFileExclusive(filePath, controlSettingsString);  
+
+            return { success: true, message: 'Parameters set successfully.' };
+           
+        }
+    } catch (err) {
+        console.error('Failed to write to file:', err);
+        return { success: false, message: 'Failed to set parameters.' };
+    }
+}
+
+app.post('/setParameters', async (req, res) => {
+    const newSettings = req.body; // New settings from the request
+
+    const result = await setParametersInternal(newSettings);  // Use the shared internal function
+
+    if (result.success) {
+        return res.send(result.message);  // Send success message
+    } else {
+        return res.status(500).send(result.message);  // Send error message
+    }
+    // let filePath;
+
+    // try {
+    //     if(!setControlParameters){
+    //         filePath = 'setting.txt';
+
+    //         let currentSettings = await readCurrentSettings(filePath); // Added await
+    //         currentSettings = updateAllParameters(currentSettings, newSettings);
+    //         const settingsString = formatSettingsString(currentSettings);  // Format the settings as a string
+    //         await writeToFileExclusive(filePath, settingsString);  // Write the formatted string to the file
+
+    //         filePath = 'Control.txt';
+    //         currentSettings.mosquitoMode = 'false';
+    //         console.log('current setting.txt settings should read false: ', currentSettings);
+    //         const controlSettingsString = formatSettingsString(currentSettings);  // Format the control settings
+    //         await writeToFileExclusive(filePath, controlSettingsString);  
+
+    //         res.send('Parameters set successfully.');
+    //     } else {
+    //         filePath = 'Control.txt';
+            
+    //         let currentSettings = await readCurrentSettings(filePath); // Added await
+    //         currentSettings = updateAllParameters(currentSettings, newSettings);
+    //         currentSettings.mosquitoMode = 'true';
+            
+    //         console.log('current Control.txt settings should read true:', currentSettings);
+    //         const controlSettingsString = formatSettingsString(currentSettings);  // Format the control settings
+    //         await writeToFileExclusive(filePath, controlSettingsString);  
+
+    //         res.send('Control parameters set successfully.');
+    //     }
+    // } catch (err) {
+    //     console.error('Failed to write to file:', err);
+    //     // Ensure only one response is sent back in case of an error
+    //     res.status(500).send('Failed to set parameters.');
+    // }
+});
+
+
+// app.post('/setParameters', async (req, res) => {
+//     const newSettings = req.body; // New settings from the request
+
+//     if(!await isMosquitoModeActivated()){
+//         let filePath = 'setting.txt';
+
+//         let currentSettings = await readCurrentSettings(filePath);
+  
+//         // Update both normal and control parameters
+//         currentSettings = updateAllParameters(currentSettings, newSettings);
+        
+//         try {
+//             const settingString = formatSettingString(currentSettings);
+//             await writeToFileExclusive(filePath, settingString);
+//             res.send('Parameters set successfully.');
+//         } catch (err) {
+//             console.error('Failed to write to setting.txt:', err);
+//             res.status(500).send('Failed to set parameters.');
+//         }
+
+//         filePath = 'Control.txt';
+
+//         //set the file so that control parameters are not used.
+//         currentSettings.mosquitoMode = "false";
+
+//         try {
+//             const settingString = formatSettingString(currentSettings);
+//             await writeToFileExclusive(filePath, settingString);
+//             res.send('Parameters set successfully.');
+//         } catch (err) {
+//             console.error('Failed to write to setting.txt:', err);
+//             res.status(500).send('Failed to set parameters.');
+//         }
+        
+//     }else{
+//         let filePath = 'Control.txt';
+
+//         let currentSettings = await readCurrentSettings(filePath);
+  
+//         // Update both normal and control parameters
+//         currentSettings = updateAllParameters(currentSettings, newSettings);
+        
+//         //set the file so that control parameters are used
+//         currentSettings.mosquitoMode="true";
+    
+//         try {
+//             const settingString = formatSettingString(currentSettings);
+//             await writeToFileExclusive(filePath, settingString);
+//             res.send('Control parameters set successfully.');
+//         } catch (err) {
+//             console.error('Failed to write to Control.txt:', err);
+//             res.status(500).send('Failed to set control parameters.');
+//         }
+//     }
+  
+    
+// });
+
+// app.post('/setControl', async (req, res) => {
+//     const newSettings = req.body; // New settings from the request
+  
+//     // Assume currentSettings is stored globally or fetched from a database
+//     let currentSettings = readCurrentSettings('Control.txt');
+  
+//     // Update both normal and control parameters
+//     currentSettings = updateAllParameters(currentSettings, newSettings);
+  
+//     try {
+//         await writeToFileExclusive('Control.txt', currentSettings);
+//         res.send('Control parameters set successfully.');
+//     } catch (err) {
+//         console.error('Failed to write to setting.txt:', err);
+//         res.status(500).send('Failed to set control parameters.');
+//     }
+// });
+  
 
 // Route to fetch data from CSV file
 // app.get('/data', async (req, res) => {
@@ -164,27 +520,27 @@ app.post('/setParameters', async (req, res) => {
 //         res.status(500).json({ message: 'Error fetching data.' });
 //     }
 // });
-async function getDataFromCSV() {
-    const data = [];
-    const filePath = path.join(__dirname, 'data.csv'); // Adjust the path as needed
+// async function getDataFromCSV() {
+//     const data = [];
+//     const filePath = path.join(__dirname, 'data.csv'); // Adjust the path as needed
 
-    return new Promise((resolve, reject) => {
-        fs.createReadStream(filePath)
-            .pipe(csv())
-            .on('data', (row) => {
-                data.push(row);
-                console.log('Row read:', row); // Debugging line to see the rows being read
-            })
-            .on('end', () => {
-                console.log('Finished reading CSV. Total rows:', data.length); // Debugging line
-                resolve(data);
-            })
-            .on('error', (error) => {
-                console.error('Error reading CSV:', error); // Improved error logging
-                reject(error);
-            });
-    });
-}
+//     return new Promise((resolve, reject) => {
+//         fs.createReadStream(filePath)
+//             .pipe(csv())
+//             .on('data', (row) => {
+//                 data.push(row);
+//                 console.log('Row read:', row); // Debugging line to see the rows being read
+//             })
+//             .on('end', () => {
+//                 console.log('Finished reading CSV. Total rows:', data.length); // Debugging line
+//                 resolve(data);
+//             })
+//             .on('error', (error) => {
+//                 console.error('Error reading CSV:', error); // Improved error logging
+//                 reject(error);
+//             });
+//     });
+// }
 
 // app.get('/data', async (req, res) => {
 //     const startDate = req.query.start;
@@ -908,8 +1264,8 @@ app.get('/savedAvailableNetworks', (req, res) => {
 
 // UUID generator function
 let connectionInProgress = null;
-let connectionStatus;
-let lastConnectionError;
+let connectionStatus = 'idle';
+let lastConnectionError = '';
 
 
 app.post('/connect', (req, res) => {
@@ -1007,6 +1363,10 @@ method=auto
                                     console.log('Incorrect password');
                                     connectionStatus = 'failed';
                                     lastConnectionError = 'Incorrect password.';
+
+                                    // restartTelebit()
+                                    // .then(result => console.log(result))
+                                    // .catch(error => console.error(error));
                                 } else {
                                     console.log(`Reconnection attempt to ${ssid} failed: ${stderr}`);
                                     connectionStatus = 'failed';
@@ -1039,6 +1399,19 @@ method=auto
                                 console.log('Incorrect password');
                                 connectionStatus = 'failed';
                                 lastConnectionError = 'Incorrect password.';
+
+                                // restartTelebit()
+                                //     .then(result => console.log(result))
+                                //     .catch(error => console.error(error));
+                                // exec('sudo systemctl restart NetworkManager', (err, stdout, stderr) => {
+                                //     if (err) {
+                                //         console.error('Failed to restart NetworkManager:', stderr);
+                                //         connectionStatus = 'failed';
+                                //         lastConnectionError = 'Failed to restart NetworkManager.';
+                                //         connectionInProgress = false;
+                                //         return;
+                                //     }
+                                // });
                             } else {
                                 console.log(`Final attempt to ${ssid} failed: ${stderr}`);
                                 connectionStatus = 'failed';
@@ -1091,6 +1464,23 @@ app.post('/connectSaved', (req, res) => {
                 connectionStatus = 'failed';
                 lastConnectionError = 'Incorrect password.';
                 console.log(`Incorrect password for ${ssid}`);
+                // restartTelebit()
+                //     .then(result => console.log(result))
+                //     .catch(error => console.error(error));
+
+                
+                
+
+                // exec('sudo systemctl restart NetworkManager', (err, stdout, stderr) => {
+                //     if (err) {
+                //         console.error('Failed to restart NetworkManager:', stderr);
+                //         connectionStatus = 'failed';
+                //         lastConnectionError = 'Failed to restart NetworkManager.';
+                //         connectionInProgress = false;
+                //         return;
+                //     }
+                // });
+
                 return res.status(401).send(lastConnectionError);
             }
 
@@ -1103,6 +1493,7 @@ app.post('/connectSaved', (req, res) => {
         if (stdout.includes('successfully activated')) {
             connectionStatus = 'connected';
             console.log(`Successfully connected to ${ssid}`);
+            lastConnectionError = '';
             handleGatewayUpdate();  // Call your existing gateway update logic
             return res.send(`Successfully connected to ${ssid}`);
         } else {
@@ -1117,18 +1508,68 @@ app.post('/connectSaved', (req, res) => {
 
 // Add a new status endpoint to check connection progress
 app.get('/status', (req, res) => {
+    console.log("status hit");
     if (connectionInProgress) {
         return res.status(200).send({ status: 'in_progress' });
     }
 
     if (connectionStatus === 'connected') {
+        console.log("status connected");
         return res.status(200).send({ status: 'connected' });
     } else if (connectionStatus === 'failed') {
+        console.log("status lastconnection error:",lastConnectionError);
         return res.status(500).send({ status: 'failed', error: lastConnectionError });
+    } else if(connectionInProgress === true){
+        return res.status(200).send({ status: `Connection to ${ssid} in progress...` } );
     } else {
         return res.status(200).send({ status: 'idle' });
     }
 });
+
+// Function to restart the Telebit service
+// function restartTelebit() {
+//     exec('systemctl --user restart telebit-restart.service', (error, stdout, stderr) => {
+//         if (error) {
+//             console.error(`Error restarting Telebit: ${error.message}`);
+//             return;
+//         }
+//         if (stderr) {
+//             console.error(`stderr: ${stderr}`);
+//             return;
+//         }
+//         console.log(`Telebit restart output: ${stdout}`);
+//     });
+// }
+
+// function restartTelebit() {
+//     return new Promise((resolve, reject) => {
+//         exec('systemctl restart telebit-restart.service', (error, stdout, stderr) => {
+//             if (error) {
+//                 reject(`Error: ${error.message}`);
+//             } else if (stderr) {
+//                 reject(`stderr: ${stderr}`);
+//             } else {
+//                 resolve(`Telebit restarted successfully: ${stdout}`);
+//             }
+//         });
+//     });
+// }
+
+// function restartTelebit() {
+//     return new Promise((resolve, reject) => {
+//         // Execute the bash script that handles the Telebit restart
+//         exec('/home/mozzi/host_own_website/restart-telebit.sh', (error, stdout, stderr) => {
+//             if (error) {
+//                 reject(`Error: ${error.message}`);
+//             } else if (stderr) {
+//                 reject(`stderr: ${stderr}`);
+//             } else {
+//                 resolve(`Telebit restarted successfully: ${stdout}`);
+//             }
+//         });
+//     });
+// }
+
 
 let currentGateway;
 
