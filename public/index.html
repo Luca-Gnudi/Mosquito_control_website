@@ -16,18 +16,22 @@
     <!-- Navigation Bar -->
     <div class="navbar">
         <a href="#"><img src="/android-chrome-512x512.png" alt="Logo" class="navbar-logo"></a>
+        
         <!-- <a href="index.html" class="active">Home</a> -->
-    <div class="dropdown">
-        <button class="dropbtn">Home &#9660 </button>
-        <div class="dropdown-content">
-            <a href="#conditions">Current Conditions</a>
-            <a href="#controlParametersSection">Control Parameter Settings</a> 
-            <a href="#parameters">Set Parameters</a>
-            <a href="#data">Data Plot</a>
+    <div class="navbar-left">
+        <div class="dropdown">
+            <button class="dropbtn">Home &#9660 </button>
+            <div class="dropdown-content">
+                <a href="#conditions">Current Conditions</a>
+                <a href="#controlParametersSection">Control Parameter Settings</a> 
+                <a href="#parameters">Set Parameters</a>
+                <a href="#data">Data Plot</a>
+            </div>
         </div>
-    </div>
         <a href="/networks.html">Available Networks</a>
         <button id="mosquitoModeBtn">Mosquito Mode</button>
+    </div>
+        <h1 class="navbar-title">Mosquito Environment Control</h1>
     </div>
 
     <!-- Main Content -->
@@ -127,14 +131,22 @@
             <br><br>
             <button id="toggleButton" onclick="togglePlotMode()">Switch to Separate Graphs</button>
             <div id="combinedChartContainer">
-                <canvas id="chart" width="800" height="400"></canvas>
+                <div class="chart-container">
+                <canvas id="chart" width="1920px" height="1080px"></canvas>
+                </div>
             </div>
             <div id="separateGraphsContainer" style="display: none;">
-                <canvas id="tempChart" width="800" height="400"></canvas>
+                <div class ="chart-container">
+                <canvas id="tempChart" ></canvas>
+                </div>
                 <button id="downloadTemperature">Download Temperature Graph</button>
-                <canvas id="humidChart" width="800" height="400"></canvas>
+                <div class="chart-container">
+                <canvas id="humidChart" ></canvas>
+                </div>
                 <button id="downloadHumidity">Download Humidity Graph</button>
-                <canvas id="lightChart" width="800" height="400"></canvas>
+                <div class="chart-container">
+                <canvas id="lightChart" ></canvas>
+                </div>
                 <button id="downloadLighting">Download Lighting Graph</button>
             </div>
             <br><br>
@@ -277,7 +289,7 @@
                         // Handle the backend response
                         const result = await response.json();
                         alert(`Mosquito mode set: ${result.message}`);
-                       
+                        fetchCurrentParameters();
                         document.body.classList.remove('mosquito-mode');
                         console.log('mosquito mode:', setControlParameters);
                         
@@ -343,7 +355,7 @@
                 document.getElementById('controlSamplingDuration').textContent = convertMinutesToHoursAndMinutes(data.samplingDuration) || 'Not Set';
 
                 document.getElementById('controlLightingMode').textContent = data.lightingMode || 'Not Set';
-                document.getElementById('controlMinuteCount').textContent = data.minuteCount || 'Not Set';
+                document.getElementById('controlMinuteCount').textContent = convertMinutesToHoursAndMinutes(data.minuteCount) || 'Not Set';
                 document.getElementById('controlTimeOn').textContent = data.timeOn || 'Not Set';
                 document.getElementById('controlTimeOff').textContent = data.timeOff || 'Not Set';
             } catch (err) {
@@ -358,10 +370,23 @@
                 let response;
                 //show the relevant parameters
                 if (setControlParameters){
-                    response = await fetch('getControlParameters');
+                    response = await fetch('/getControlParameters');
                 } else{
                     response = await fetch('/getParameters');
                 }
+
+                // response = await fetch('/getControlParameters');
+                // const data1 = await response.json();
+
+                // if(data1.mosquitoMode === 'true'){
+                //     setControlParameters = true;
+
+                //     //document.body.classList.add('mosquito-mode');
+                // }else{
+                //     setControlParameters = false; 
+                //     response = await fetch('/getParameters');
+                //     //document.body.classList.remove('mosquito-mode');
+                // }
                 
                 const data = await response.json();
                 
@@ -375,7 +400,7 @@
                 document.getElementById('currentSamplingDuration').textContent = convertMinutesToHoursAndMinutes(data.samplingDuration) || 'Not Set';
 
                 document.getElementById('currentLightingMode').textContent = data.lightingMode || 'Not Set';
-                document.getElementById('currentMinuteCount').textContent = data.minuteCount || 'Not Set';
+                document.getElementById('currentMinuteCount').textContent = convertMinutesToHoursAndMinutes(data.minuteCount) || 'Not Set';
                 document.getElementById('currentTimeOn').textContent = data.timeOn || 'Not Set';
                 document.getElementById('currentTimeOff').textContent = data.timeOff || 'Not Set';
             } catch (err) {
@@ -691,7 +716,7 @@
                 return data;
             } catch (error) {
                 console.error('Error fetching data:', error);
-                alert('Error fetching data.');
+                //alert('Error fetching data.');
                 return [];
             }
         }
@@ -1199,7 +1224,7 @@
         } else{return;}
         
         
-    }, 5000);
+    }, 30000);
 
     document.getElementById('download-full-csv').addEventListener('click', function () {
             window.location.href = '/download/full';
@@ -1270,6 +1295,13 @@
             console.error('Error fetching filtered data:', error);
             document.getElementById('status').textContent = 'Error fetching filtered data.';
         }
+    });
+
+    window.addEventListener('resize', function() {
+        combinedChart.resize();
+        temperatureChart.resize();
+        humidityChart.resize();
+        lightingChart.resize(); 
     });
 
 
